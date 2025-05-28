@@ -1,0 +1,63 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "load_model",
+        "type": "LoadModel",
+        "inputs": {
+          "model_path": "models/Stable-diffusion/sd_xl_base_1.0.safetensors",
+          "vae_path": "models/VAE/sdxl_vae.safetensors"
+        }
+      },
+      {
+        "id": "load_lora",
+        "type": "ApplyLoRA",
+        "inputs": {
+          "lora_path": "loras/avatar_style_lora.safetensors",
+          "strength_model": 0.7,
+          "strength_clip": 0.7,
+          "model": "@load_model"
+        }
+      },
+      {
+        "id": "positive_prompt",
+        "type": "CLIPTextEncode",
+        "inputs": {
+          "text": "portrait of {user_name}, {style} style, 4k, ultra-detailed",
+          "clip": "@load_lora"
+        }
+      },
+      {
+        "id": "negative_prompt",
+        "type": "CLIPTextEncode",
+        "inputs": {
+          "text": "blurry, deformed, cropped, low-res",
+          "clip": "@load_lora"
+        }
+      },
+      {
+        "id": "sampler",
+        "type": "KSampler",
+        "inputs": {
+          "model": "@load_lora",
+          "positive": "@positive_prompt",
+          "negative": "@negative_prompt",
+          "steps": 30,
+          "cfg": 7,
+          "sampler_name": "euler",
+          "seed": 12345678,
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "id": "save_image",
+        "type": "SaveImage",
+        "inputs": {
+          "image": "@sampler",
+          "output_path": "results/{session_id}.png"
+        }
+      }
+    ]
+  }
+}
