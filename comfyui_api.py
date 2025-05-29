@@ -16,24 +16,35 @@ def modify_workflow(input_dir, style, session_id):
     with open(WORKFLOW_BASE_PATH, 'r') as f:
         workflow = json.load(f)
 
+    # Dynamically build LoRA path based on style
+    lora_filename = f"{style.lower()}_style_lora.safetensors"
+    lora_path = os.path.join("loras", lora_filename)
+
+    # Fallback to default if LoRA file doesn't exist
+    if not os.path.exists(lora_path):
+        print(f"⚠️ LoRA file not found for style '{style}', falling back to default.")
+        lora_path = os.path.join("loras", "default_style_lora.safetensors")
+
     for node in workflow['workflow']['nodes']:
-        # Replace in positive prompt text
-        if node['type'] == 'CLIPTextEncode' and 'positive' in node['id']:
+        if node['type'] == 'ApplyLoRA':
+            node['inputs']['lora_path'] = lora_path
+
+        elif node['type'] == 'CLIPTextEncode' and 'positive' in node['id']:
             prompt = node['inputs']['text']
             prompt = prompt.replace("{style}", style).replace("{user_name}", session_id)
             node['inputs']['text'] = prompt
 
-        # Replace in SaveImage output path
         elif node['type'] == 'SaveImage':
             node['inputs']['output_path'] = f"results/{session_id}.png"
 
-    # Save modified workflow to a temp file
     os.makedirs("temp_workflows", exist_ok=True)
     temp_path = f"temp_workflows/{session_id}_workflow.json"
     with open(temp_path, 'w') as f:
         json.dump(workflow, f, indent=4)
 
     return temp_path
+
+
 
 
 
