@@ -10,6 +10,13 @@
         }
       },
       {
+        "id": "load_clip",
+        "type": "LoadCLIP",
+        "inputs": {
+          "clip_path": "models/CLIP/clip-vit-large-patch14.safetensors"
+        }
+      },
+      {
         "id": "load_lora",
         "type": "ApplyLoRA",
         "inputs": {
@@ -24,7 +31,7 @@
         "type": "CLIPTextEncode",
         "inputs": {
           "text": "portrait of {user_name}, {style} style, 4k, ultra-detailed",
-          "clip": "@load_lora"
+          "clip": "@load_clip"
         }
       },
       {
@@ -32,7 +39,16 @@
         "type": "CLIPTextEncode",
         "inputs": {
           "text": "blurry, deformed, cropped, low-res",
-          "clip": "@load_lora"
+          "clip": "@load_clip"
+        }
+      },
+      {
+        "id": "latent",
+        "type": "EmptyLatentImage",
+        "inputs": {
+          "width": 512,
+          "height": 512,
+          "batch_size": 1
         }
       },
       {
@@ -42,6 +58,7 @@
           "model": "@load_lora",
           "positive": "@positive_prompt",
           "negative": "@negative_prompt",
+          "latent_image": "@latent",
           "steps": 30,
           "cfg": 7,
           "sampler_name": "euler",

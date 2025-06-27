@@ -60,6 +60,19 @@ async def upload_images(images: list[UploadFile] = File(...), style: str = Form(
 @app.post("/generate")
 async def generate_avatar(session_id: str = Form(...), style: str = Form(...)):
     user_dir = os.path.join(UPLOAD_FOLDER, session_id)
+    print(f"Checking permissions for: {user_dir}")
+    print(f"Exists: {os.path.exists(user_dir)}")
+    print(f"Is Directory: {os.path.isdir(user_dir)}")
+    print(f"Can write test file:")
+
+    try:
+        test_path = os.path.join(user_dir, "test_perm.txt")
+        with open(test_path, "w") as f:
+            f.write("permission test")
+        os.remove(test_path)
+        print("Write test: OK")
+    except Exception as e:
+        print("Write test failed:", e)
     if not os.path.exists(user_dir):
         return JSONResponse(status_code=404, content={"error": "Session not found."})
 

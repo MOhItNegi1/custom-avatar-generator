@@ -10,10 +10,8 @@ import torch
 WORKFLOW_BASE_PATH = "workflows/avatar_generation.json"
 
 
-
-
 def modify_workflow(input_dir, style, session_id):
-    with open(WORKFLOW_BASE_PATH, 'r') as f:
+    with open(input_dir, 'r') as f:
         workflow = json.load(f)
 
     # Dynamically build LoRA path based on style
@@ -22,14 +20,27 @@ def modify_workflow(input_dir, style, session_id):
 
     # Fallback to default if LoRA file doesn't exist
     if not os.path.exists(lora_path):
-        print(f"⚠️ LoRA file not found for style '{style}', falling back to default.")
+        print(f"️ LoRA file not found for style '{style}', falling back to default.")
         lora_path = os.path.join("loras", "default_style_lora.safetensors")
+
+    # Add LoadCLIP node if not present
+    if not any(node['type'] == 'LoadCLIP' for node in workflow['workflow']['nodes']):
+        load_clip_node = {
+            "id": "load_clip",
+            "type": "LoadCLIP",
+            "inputs": {
+                "clip_path": "models/CLIP/clip-vit-large-patch14.safetensors"
+            }
+        }
+        workflow['workflow']['nodes'].insert(1, load_clip_node)  # insert after LoadModel
 
     for node in workflow['workflow']['nodes']:
         if node['type'] == 'ApplyLoRA':
             node['inputs']['lora_path'] = lora_path
 
-        elif node['type'] == 'CLIPTextEncode' and 'positive' in node['id']:
+        elif node['type'] == 'CLIPTextEncode':
+            # Update clip input to reference LoadCLIP node
+            node['inputs']['clip'] = "@load_clip"
             prompt = node['inputs']['text']
             prompt = prompt.replace("{style}", style).replace("{user_name}", session_id)
             node['inputs']['text'] = prompt
@@ -43,7 +54,6 @@ def modify_workflow(input_dir, style, session_id):
         json.dump(workflow, f, indent=4)
 
     return temp_path
-
 
 
 
@@ -68,7 +78,7 @@ def run_comfyui(workflow_path):
         print(" ComfyUI API error:", response.text)
         raise RuntimeError("ComfyUI failed to accept the workflow.")
 
-    print(" Workflow submitted successfully.")
+    print(" Workflow submitted successfully. ++++++++++  ")
 
 
 
